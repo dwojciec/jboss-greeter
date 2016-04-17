@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: BuildConfig
+metadata:
+  creationTimestamp: null
+  labels:
+    application: greeter
+    template: eap6-flyway-sti
+  name: greeter
+spec:
+  output:
+    to:
+      kind: ImageStreamTag
+      name: greeter:latest
+  resources: {}
+  source:
+    git:
+      uri: https://github.com/sterburg/jboss-greeter
+      ref: v1
+    type: Git
+  strategy:
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: flyway:latest
+        namespace: jboss
+    type: Source
+  triggers:
+  - type: ImageChange
+    imageChangeParams:
+      automatic: true
+      from:
+        kind: ImageStreamTag
+        name: flyway:latest
+        namespace: jboss
+  - type: ConfigChange
+
