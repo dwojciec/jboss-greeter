@@ -3,14 +3,14 @@ kind: DeploymentConfig
 metadata:
   creationTimestamp: null
   labels:
-    application: greeter
+    application: jboss-greeter
     template: eap64-flyway-s2i
     xpaas: 1.1.0
   name: greeter
 spec:
   replicas: 1
   selector:
-    deploymentConfig: greeter
+    deploymentConfig: jboss-greeter
   strategy:
     resources: {}
     type: Rolling
@@ -18,57 +18,53 @@ spec:
       pre:
         failurePolicy: fail
         execNewPod:
-          containerName: greeter
+          containerName: jboss-greeter
           command:
           - flyway
           - migrate
-          - "-user=$ORACLE_USERNAME"
-          - "-password=$ORACLE_PASSWORD"
-          - "-schema=$ORACLE_DATABASE"
           - "-locations=/var/git/src/main/resources/sql"
-          - "-target=$OPENSHIFT_BUILD_COMMIT"
           volumes:
           - git 
   template:
     metadata:
       creationTimestamp: null
       labels:
-        application: greeter
-        deploymentConfig: greeter
-      name: greeter
+        application: jboss-greeter
+        deploymentConfig: jboss-greeter
+      name: jboss-greeter
     spec:
       containers:
       - env:
+        - name: TX_DATABASE_PREFIX_MAPPING
+          value: my-oracle=MY
+        - name: DB_SERVICE_PREFIX_MAPPING
+          value: my-oracle=MY
+        - name: MY_USERNAME
+          value: schemauser
+        - name: MY_PASSWORD
+          value: password
+        - name: MY_MIN_POOL_SIZE
+          value: "1"
+        - name: MY_MAX_POOL_SIZE
+          value: "10"
+        - name: MY_TX_ISOLATION
+          value: "false"
+        - name: MY_DATABASE
+          value: schemaname
+        - name: HORNETQ_CLUSTER_PASSWORD
+          value: U2DKiXkm
         - name: OPENSHIFT_KUBE_PING_LABELS
-          value: application=greeter
+          value: application=jboss-greeter
         - name: OPENSHIFT_KUBE_PING_NAMESPACE
           valueFrom:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        - name: TX_DATABASE_PREFIX_MAPPING
-          value: oracle=ORACLE
-        - name: DB_SERVICE_PREFIX_MAPPING
-          value: oracle=ORACLE
-        - name: ORACLE_USERNAME
-          value: schemauser
-        - name: ORACLE_PASSWORD
-          value: password
-        - name: ORACLE_MIN_POOL_SIZE
-          value: "1"
-        - name: ORACLE_MAX_POOL_SIZE
-          value: "10"
-        - name: ORACLE_TX_ISOLATION
-          value: "false"
-        - name: ORACLE_DATABASE
-          value: schemaname
-        - name: HORNETQ_CLUSTER_PASSWORD
-          value: U2DKiXkm
         - name: HORNETQ_QUEUES
         - name: HORNETQ_TOPICS
-        image: 172.30.150.84:5000/myapp/greeter:latest
+        image: 172.30.195.192:5000/myapp/jboss-greeter:latest
         imagePullPolicy: Always
-        name: greeter
+        name: jboss-greeter
         ports:
         - containerPort: 8080
           name: http
@@ -88,23 +84,22 @@ spec:
         volumeMounts:
         - name: flyway-base
           mountPath: /var/git
-      dnsPolicy: ClusterFirst
-      restartPolicy: Always
-      securityContext: {}
-      terminationGracePeriodSeconds: 60
       volumes:
       - name: flyway-base
         gitRepo:
           repository: "https://github.com/sterburg/jboss-greeter.git"
           revision: master
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      securityContext: {}
+      terminationGracePeriodSeconds: 60
   triggers:
   - imageChangeParams:
       automatic: true
       containerNames:
-      - greeter
+      - jboss-greeter
       from:
         kind: ImageStreamTag
-        name: greeter:latest
+        name: jboss-greeter:latest
     type: ImageChange
   - type: ConfigChange
-status: {}
